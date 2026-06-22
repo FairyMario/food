@@ -25,6 +25,13 @@ function updateSettingsCounts() {
     const labels = { small: '小', medium: '标准', large: '大' };
     if (fontStatus) fontStatus.textContent = labels[fontSize] || '标准';
 
+    // 昵称
+    const nickDisplay = document.getElementById('nickname-display');
+    if (nickDisplay) {
+        var n = Storage.getNickname();
+        nickDisplay.textContent = n || '未设置';
+    }
+
     // 更新作者模式入口
     updateAuthorEntry();
 }
@@ -45,15 +52,26 @@ function updateAuthorEntry() {
 
 function handleSettingsAction(action) {
     switch (action) {
+        case 'nickname': showNicknamePrompt(); break;
         case 'recommend': openRecommendPage(); break;
         case 'favorites': openSublistPage('favorites'); break;
         case 'history': openSublistPage('history'); break;
-        case 'darkmode': toggleDarkMode(); break;
+        case 'darkmode': break; // 由 toggle 开关的 change 事件处理
         case 'fontsize': showFontSizeDialog(); break;
         case 'clearcache': confirmClearCache(); break;
         case 'feedback': openFeedback(); break;
         case 'about': openAboutPage(); break;
         case 'author': handleAuthorAction(); break;
+    }
+}
+
+function showNicknamePrompt() {
+    var current = Storage.getNickname();
+    var name = prompt('请输入你的昵称（评价和推荐时使用）：', current);
+    if (name !== null) {
+        Storage.setNickname(name.trim());
+        updateSettingsCounts();
+        showToast(name.trim() ? '昵称已设置 ✅' : '昵称已清除');
     }
 }
 
@@ -130,7 +148,8 @@ function openAuthorDashboard() {
                     <button class="author-tab" data-tab="add">➕ 新增店铺</button>
                     <button class="author-tab" data-tab="recommendations">📨 用户推荐<span id="auth-rec-badge" class="auth-badge"></span></button>
                     <button class="author-tab" data-tab="feedback">📧 意见反馈<span id="auth-fb-badge" class="auth-badge"></span></button>
-                    <button class="author-tab" data-tab="export">💾 导出数据</button>
+                    <button class="author-tab" data-tab="siteconfig">⚙️ 站点设置</button>
+                <button class="author-tab" data-tab="export">💾 导出数据</button>
                 </div>
                 <div class="author-tab-content" id="author-tab-content"></div>
             </div>
@@ -157,7 +176,8 @@ function renderAuthorTab(tabName) {
         case 'manage': container.innerHTML = renderAuthorManageTab(); break;
         case 'add': container.innerHTML = renderAuthorAddTab(); break;
         case 'recommendations': container.innerHTML = renderAuthorRecTab(); break;
-        case 'feedback': container.innerHTML = renderAuthorFeedbackTab(); break;
+        case 'feedback': container.innerHTML = renderAuthorFeedbackTab(); markFeedbackRead(); updateAuthorBadges(); break;
+        case 'siteconfig': container.innerHTML = renderSiteConfigTab(); initBannerPreview(); break;
         case 'export': container.innerHTML = renderAuthorExportTab(); break;
     }
     // 更新徽章
@@ -222,24 +242,11 @@ function authorDeleteFromDashboard(storeId) {
 /* --- 新增 Tab --- */
 
 function renderAuthorAddTab() {
-    const storeId = 'store_' + Date.now();
     return `
         <form id="author-add-form" class="recommend-form" onsubmit="submitAuthorAdd(event)" style="padding:0;">
             <div class="form-group">
                 <label class="form-label">店铺名称 <span class="required">*</span></label>
                 <input type="text" name="name" class="form-input" placeholder="输入店铺名称" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">分类</label>
-                <select name="category" class="form-input">
-                    <option value="">选择分类</option>
-                    <option value="胡辣汤">胡辣汤</option><option value="烩面">烩面</option>
-                    <option value="豫菜">豫菜</option><option value="小吃">小吃</option>
-                    <option value="早餐">早餐</option><option value="夜宵">夜宵</option>
-                    <option value="烧烤">烧烤</option><option value="火锅">火锅</option>
-                    <option value="面食">面食</option><option value="甜点饮品">甜点饮品</option>
-                    <option value="其他">其他</option>
-                </select>
             </div>
             <div class="form-group">
                 <label class="form-label">标签（逗号分隔）</label>
@@ -267,55 +274,109 @@ function renderAuthorAddTab() {
             </div>
             <div class="form-group">
                 <label class="form-label">地址 <span class="required">*</span></label>
-                <input type="text" name="address" class="form-input" placeholder="详细地址" required>
+                <input type="text" id="author-add-address" name="address" class="form-input" placeholder="输入详细地址后点右侧按钮自动识别坐标" required>
             </div>
+            <button type="button" class="form-submit-btn" onclick="geocodeAddress()" style="margin-bottom:10px;background:var(--bg-tertiary);color:var(--text-primary);">📍 自动识别坐标</button>
+            <input type="hidden" name="lat" id="author-add-lat" value="34.7533">
+            <input type="hidden" name="lng" id="author-add-lng" value="113.6654">
+            <div id="geocode-result" style="font-size:calc(0.78rem*var(--font-size-multiplier));color:var(--text-muted);margin-bottom:8px;"></div>
             <div class="form-group">
                 <label class="form-label">所在区域</label>
                 <select name="district" class="form-input">
                     <option value="">选择区域</option>
-                    <option value="金水区">金水区</option><option value="二七区">二七区</option>
-                    <option value="中原区">中原区</option><option value="管城回族区">管城回族区</option>
-                    <option value="惠济区">惠济区</option><option value="郑东新区">郑东新区</option>
-                    <option value="高新区">高新区</option><option value="经开区">经开区</option>
-                    <option value="航空港区">航空港区</option><option value="上街区">上街区</option>
-                    <option value="其他">其他</option>
+                    ${['金水区','二七区','中原区','管城回族区','惠济区','郑东新区','高新区','经开区','航空港区','上街区','其他'].map(d => `<option value="${d}">${d}</option>`).join('')}
                 </select>
-            </div>
-            <div class="form-row">
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">纬度</label>
-                    <input type="number" name="lat" class="form-input" step="0.0001" placeholder="34.75">
-                </div>
-                <div class="form-group" style="flex:1;">
-                    <label class="form-label">经度</label>
-                    <input type="number" name="lng" class="form-input" step="0.0001" placeholder="113.66">
-                </div>
             </div>
             <div class="form-group">
                 <label class="form-label">营业时间</label>
                 <input type="text" name="openingHours" class="form-input" placeholder="如：06:00-14:00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">上传照片（最多9张）</label>
+                <input type="file" id="author-add-photos" class="form-input" accept="image/*" multiple onchange="handleAuthorAddPhotos(this.files)">
+                <div id="author-add-photo-preview" class="photo-preview"></div>
             </div>
             <button type="submit" class="form-submit-btn">✅ 添加店铺</button>
         </form>
     `;
 }
 
+// 当前新增照片列表
+let _authorAddPhotos = [];
+
+function handleAuthorAddPhotos(files) {
+    var preview = document.getElementById('author-add-photo-preview');
+    _authorAddPhotos = [];
+    preview.innerHTML = '';
+    Array.from(files).forEach(function(file, i) {
+        if (i >= 9) return;
+        compressImage(file, 800, 800, 0.7).then(function(dataUrl) {
+            _authorAddPhotos.push(dataUrl);
+            var img = document.createElement('img');
+            img.src = dataUrl;
+            img.className = 'photo-thumb';
+            preview.appendChild(img);
+        });
+    });
+}
+
+function geocodeAddress() {
+    var addr = document.getElementById('author-add-address').value.trim();
+    var resultEl = document.getElementById('geocode-result');
+    if (!addr) { resultEl.textContent = '⚠️ 请先输入地址'; return; }
+
+    // 拼接完整地址
+    var fullAddr = '郑州市' + addr;
+    resultEl.textContent = '🔄 正在识别坐标...';
+
+    // 高德地理编码 JSONP
+    var cbName = '_geoCodeCb_' + Date.now();
+    var script = document.createElement('script');
+    var done = false;
+
+    function cleanup() {
+        if (done) return; done = true;
+        clearTimeout(timer);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    var timer = setTimeout(function() { cleanup(); resultEl.textContent = '⚠️ 识别超时，请手动输入准确地址'; }, 8000);
+
+    window[cbName] = function(data) {
+        if (done) return;
+        if (data.status === '1' && data.geocodes && data.geocodes.length > 0) {
+            var loc = data.geocodes[0].location.split(',');
+            var lng = parseFloat(loc[0]);
+            var lat = parseFloat(loc[1]);
+            document.getElementById('author-add-lat').value = lat;
+            document.getElementById('author-add-lng').value = lng;
+            resultEl.textContent = '✅ 已识别: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+        } else {
+            resultEl.textContent = '⚠️ 未找到，请补充详细地址后重试';
+        }
+        cleanup();
+    };
+    script.onerror = function() { cleanup(); resultEl.textContent = '⚠️ 网络错误，请重试'; };
+    script.src = 'https://restapi.amap.com/v3/geocode/geo?key=2d9d689ea5452c206c7423cf00ffe24f&address=' + encodeURIComponent(fullAddr) + '&output=JSON&callback=' + cbName;
+    document.head.appendChild(script);
+}
+
 function submitAuthorAdd(e) {
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const storeId = 'store_' + Date.now();
+    var fd = new FormData(e.target);
+    var storeId = 'store_' + Date.now();
 
-    const newStore = {
+    var newStore = {
         id: storeId,
         name: fd.get('name'),
-        category: fd.get('category') || '其他',
-        tags: fd.get('tags') ? fd.get('tags').split(/[,，]/).map(t => t.trim()).filter(Boolean) : [],
+        category: '其他',
+        tags: fd.get('tags') ? fd.get('tags').split(/[,，]/).map(function(t) { return t.trim(); }).filter(Boolean) : [],
         rating: parseInt(fd.get('rating')) || 4,
         priceRange: fd.get('priceRange') || '待补充',
         description: fd.get('description') || '',
-        mustTry: fd.get('mustTry') ? fd.get('mustTry').split(/[,，]/).map(t => t.trim()).filter(Boolean) : [],
+        mustTry: fd.get('mustTry') ? fd.get('mustTry').split(/[,，]/).map(function(t) { return t.trim(); }).filter(Boolean) : [],
         tips: fd.get('tips') || '',
-        photos: [],
+        photos: _authorAddPhotos.slice(),
         branches: [{
             id: storeId + '_main',
             name: fd.get('name'),
@@ -332,8 +393,10 @@ function submitAuthorAdd(e) {
     authorAddStore(newStore);
     refreshStores();
     renderHome();
-    renderAuthorTab('add'); // 清空表单
-    showToast('✅ 店铺已添加！（导出数据后永久生效）');
+    // 重置
+    _authorAddPhotos = [];
+    renderAuthorTab('add');
+    showToast('✅ 店铺已添加！');
 }
 
 /* --- 用户推荐 Tab --- */
@@ -406,6 +469,78 @@ function renderAuthorFeedbackTab() {
 
 /* --- 导出 Tab --- */
 
+/* --- 站点设置 Tab --- */
+
+function renderSiteConfigTab() {
+    var currentBanner = Storage.getBannerText();
+    var currentStyle = Storage.getBannerStyle();
+    return `
+        <div style="padding:0;">
+            <h3 style="margin-bottom:12px;">🏠 首页横幅设置</h3>
+            <div class="form-group">
+                <label class="form-label">横幅文字（支持换行，留空隐藏）</label>
+                <textarea id="banner-text-input" class="form-input form-textarea" rows="4" placeholder="输入自定义文字...">${escapeHTML(currentBanner)}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">字体颜色</label>
+                <input type="color" id="banner-color-input" class="form-input" value="${escapeHTML(currentStyle.color || '#999999')}" style="height:40px;width:60px;padding:4px;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">字体样式</label>
+                <select id="banner-font-input" class="form-input">
+                    <option value="monospace" ${currentStyle.font==='monospace'?'selected':''}>等宽像素风</option>
+                    <option value='"Microsoft YaHei",sans-serif' ${currentStyle.font==='"Microsoft YaHei",sans-serif'?'selected':''}>微软雅黑</option>
+                    <option value='"STKaiti","KaiTi",serif' ${currentStyle.font==='"STKaiti","KaiTi",serif'?'selected':''}>楷体</option>
+                    <option value='"SimSun",serif' ${currentStyle.font==='"SimSun",serif'?'selected':''}>宋体</option>
+                    <option value='cursive' ${currentStyle.font==='cursive'?'selected':''}>手写体</option>
+                    <option value='"Courier New",monospace' ${currentStyle.font==='"Courier New",monospace'?'selected':''}>西文像素</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">字号大小：${currentStyle.size || '0.82'}rem</label>
+                <input type="range" id="banner-size-input" class="form-input" min="0.5" max="2" step="0.02" value="${currentStyle.size || '0.82'}" style="padding:0;height:6px;">
+            </div>
+            <button class="form-submit-btn" onclick="saveBannerConfig()">💾 保存设置</button>
+            <div id="banner-preview" style="margin-top:14px;padding:12px;background:var(--bg-secondary);border-radius:8px;border:1px dashed var(--border-color);text-align:center;letter-spacing:2px;white-space:pre-wrap;word-break:break-all;color:${escapeHTML(currentStyle.color||'#999')};font-family:${currentStyle.font||'monospace'};font-size:calc(${currentStyle.size||'0.82'}rem*var(--font-size-multiplier));">${escapeHTML(currentBanner || '· · 预 览 横 幅 · ·')}</div>
+        </div>
+    `;
+}
+
+function initBannerPreview() {
+    var textEl = document.getElementById('banner-text-input');
+    var colorEl = document.getElementById('banner-color-input');
+    var fontEl = document.getElementById('banner-font-input');
+    var sizeEl = document.getElementById('banner-size-input');
+    var preview = document.getElementById('banner-preview');
+    if (!preview) return;
+
+    function update() {
+        preview.textContent = textEl.value || '· · 预 览 横 幅 · ·';
+        preview.style.color = colorEl.value;
+        preview.style.fontFamily = fontEl.value;
+        preview.style.fontSize = 'calc(' + sizeEl.value + 'rem * var(--font-size-multiplier))';
+    }
+
+    textEl.addEventListener('input', update);
+    colorEl.addEventListener('input', update);
+    fontEl.addEventListener('change', update);
+    sizeEl.addEventListener('input', update);
+}
+
+function saveBannerConfig() {
+    var text = document.getElementById('banner-text-input').value;
+    var color = document.getElementById('banner-color-input').value;
+    var font = document.getElementById('banner-font-input').value;
+    var size = document.getElementById('banner-size-input').value;
+    Storage.setBannerText(text);
+    Storage.setBannerStyle({ color: color, font: font, size: size });
+    refreshStores();
+    renderHome();
+    showToast(text ? '横幅已更新 ✅' : '横幅已清空');
+}
+
+/* --- 导出 Tab --- */
+
 function renderAuthorExportTab() {
     const stats = getAuthorStats();
     const jsonPreview = exportFoodsJSON();
@@ -443,15 +578,25 @@ function updateAuthorBadges() {
     const recBadge = document.getElementById('auth-rec-badge');
     const fbBadge = document.getElementById('auth-fb-badge');
     if (recBadge) {
-        const pending = getRecommendations().filter(r => r.status === 'pending').length;
+        const pending = getRecommendations().filter(function(r) { return r.status === 'pending'; }).length;
         recBadge.textContent = pending > 0 ? pending : '';
         recBadge.style.display = pending > 0 ? 'inline' : 'none';
     }
     if (fbBadge) {
-        const count = getFeedback().length;
-        fbBadge.textContent = count > 0 ? count : '';
-        fbBadge.style.display = count > 0 ? 'inline' : 'none';
+        const allFb = getFeedback();
+        const lastRead = getLastFeedbackRead();
+        const unread = allFb.filter(function(f) { return (f.submittedAt || '') > lastRead; }).length;
+        fbBadge.textContent = unread > 0 ? unread : '';
+        fbBadge.style.display = unread > 0 ? 'inline' : 'none';
     }
+}
+
+function getLastFeedbackRead() {
+    try { return localStorage.getItem('zzfood_fb_read') || ''; } catch(e) { return ''; }
+}
+
+function markFeedbackRead() {
+    localStorage.setItem('zzfood_fb_read', new Date().toISOString());
 }
 
 /* ============================================
@@ -519,10 +664,10 @@ function openAboutPage() {
     page.innerHTML = `
         <div class="about-content">
             <div class="about-logo">🍜</div>
-            <div class="about-title">郑州美食地图</div>
+            <div class="about-title">吃遍郑州</div>
             <div class="about-version">版本 1.0.0</div>
             <div class="about-desc">
-                <p>郑州美食地图是一个公益性质的美食导航网站，旨在帮助来到郑州的朋友发现最地道的美食。</p>
+                <p>吃遍郑州是一个公益性质的美食导航网站，旨在帮助来到郑州的朋友发现最地道的美食。</p>
                 <br>
                 <p>📌 <strong>数据来源：</strong>美食爱好者投稿 + 作者实地探访</p>
                 <p>🔄 <strong>更新频率：</strong>持续更新中</p>

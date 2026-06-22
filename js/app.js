@@ -143,9 +143,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- 深色模式开关 ---
+    // --- 深色模式开关（阻止冒泡避免触发父元素 settings-item 的点击） ---
     document.getElementById('darkmode-toggle').addEventListener('change', (e) => {
+        e.stopPropagation();
         Storage.setDarkMode(e.target.checked);
+        applyTheme();
+        updateSettingsCounts();
+    });
+    document.querySelector('#darkmode-toggle').closest('.settings-item').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tg = document.getElementById('darkmode-toggle');
+        tg.checked = !tg.checked;
+        Storage.setDarkMode(tg.checked);
         applyTheme();
         updateSettingsCounts();
     });

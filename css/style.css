@@ -1240,6 +1240,29 @@ body.dark .musttry-item {
 }
 
 /* ============================================
+   首页像素横幅
+   ============================================ */
+.home-banner {
+    margin: 10px 14px 0;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-family: "Courier New", "SimHei", monospace;
+    font-size: calc(0.72rem * var(--font-size-multiplier));
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    line-height: 1.6;
+    border: 1px dashed var(--border-color);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.home-banner.hidden {
+    display: none;
+}
+
+/* ============================================
    作者模式
    ============================================ */
 

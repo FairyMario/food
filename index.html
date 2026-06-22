@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#e74c3c">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="郑州美食地图">
+    <meta name="apple-mobile-web-app-title" content="吃遍郑州">
     <meta name="description" content="发现郑州最地道的美食，胡辣汤、烩面、豫菜、小吃一网打尽">
-    <title>郑州美食地图</title>
+    <title>吃遍郑州</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="images/icon.svg">
@@ -21,7 +21,7 @@
         <div id="tab-home" class="tab-content active">
             <!-- 顶栏 -->
             <div class="top-bar">
-                <h1 class="top-title">郑州美食地图</h1>
+                <h1 class="top-title">吃遍郑州</h1>
                 <button id="view-switch-btn" class="view-switch-btn" aria-label="切换分类视图">
                     <span id="view-switch-text">总览</span>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -34,6 +34,9 @@
                 <div class="view-menu-item" data-view="district">📍 按区域划分</div>
                 <div class="view-menu-item" data-view="rating">⭐ 按推荐星级</div>
             </div>
+
+            <!-- 像素风横幅 -->
+            <div id="home-banner" class="home-banner hidden"></div>
 
             <!-- 卡片列表容器 -->
             <div id="home-list" class="home-list"></div>
@@ -92,11 +95,18 @@
                     <span class="settings-desc">输入密码进入管理</span>
                     <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </div>
+                <!-- 个人昵称 -->
+                <div class="settings-item" data-action="nickname">
+                    <span class="settings-icon">😊</span>
+                    <span class="settings-label">个人昵称</span>
+                    <span class="settings-desc" id="nickname-display">未设置</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
                 <!-- 用户推荐 -->
                 <div class="settings-item" data-action="recommend">
                     <span class="settings-icon">🌟</span>
                     <span class="settings-label">用户推荐</span>
-                    <span class="settings-desc">推荐你发现的美食</span>
+                    <span class="settings-desc">快说说你吃了什么好吃的！</span>
                     <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </div>
                 <!-- 我的收藏 -->
@@ -141,7 +151,7 @@
                 <div class="settings-item" data-action="feedback">
                     <span class="settings-icon">📧</span>
                     <span class="settings-label">意见反馈</span>
-                    <span class="settings-desc">告诉我们你的想法</span>
+                    <span class="settings-desc">我错哪了，我改</span>
                     <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
                 </div>
                 <!-- 关于本站 -->

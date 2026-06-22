@@ -7,6 +7,8 @@ const STORAGE_KEYS = {
     HISTORY: 'zzfood_history',
     DARK_MODE: 'zzfood_darkmode',
     FONT_SIZE: 'zzfood_fontsize',
+    NICKNAME: 'zzfood_nickname',
+    BANNER_TEXT: 'zzfood_banner',
 };
 
 const Storage = {
@@ -144,11 +146,60 @@ const Storage = {
     },
 
     /**
+     * 获取昵称
+     */
+    getNickname() {
+        try {
+            return localStorage.getItem(STORAGE_KEYS.NICKNAME) || '';
+        } catch (e) { return ''; }
+    },
+
+    /**
+     * 设置昵称
+     */
+    setNickname(name) {
+        localStorage.setItem(STORAGE_KEYS.NICKNAME, name);
+    },
+
+    /**
+     * 获取首页横幅文字
+     */
+    getBannerText() {
+        try {
+            return localStorage.getItem(STORAGE_KEYS.BANNER_TEXT) || '';
+        } catch (e) { return ''; }
+    },
+
+    /**
+     * 设置首页横幅文字
+     */
+    setBannerText(text) {
+        localStorage.setItem(STORAGE_KEYS.BANNER_TEXT, text);
+    },
+
+    /**
+     * 获取横幅样式
+     */
+    getBannerStyle() {
+        try {
+            var raw = localStorage.getItem('zzfood_banner_style');
+            return raw ? JSON.parse(raw) : { color: '#999999', font: 'monospace', size: '0.82' };
+        } catch (e) { return { color: '#999999', font: 'monospace', size: '0.82' }; }
+    },
+
+    /**
+     * 设置横幅样式
+     */
+    setBannerStyle(style) {
+        localStorage.setItem('zzfood_banner_style', JSON.stringify(style));
+    },
+
+    /**
      * 清除所有缓存
      */
     clearAll() {
         localStorage.removeItem(STORAGE_KEYS.FAVORITES);
         localStorage.removeItem(STORAGE_KEYS.HISTORY);
-        // 保留深色模式和字体大小设置
+        // 保留深色模式、字体大小、昵称、横幅设置
     }
 };

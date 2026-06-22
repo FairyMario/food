@@ -40,6 +40,20 @@ function refreshStores() {
 function renderHome() {
     const listEl = document.getElementById('home-list');
     const emptyEl = document.getElementById('home-empty');
+    const bannerEl = document.getElementById('home-banner');
+
+    // 渲染横幅
+    const bannerText = Storage.getBannerText();
+    if (bannerText) {
+        var style = Storage.getBannerStyle();
+        bannerEl.textContent = bannerText;
+        bannerEl.style.color = style.color || '#999999';
+        bannerEl.style.fontFamily = style.font || 'monospace';
+        bannerEl.style.fontSize = 'calc(' + (style.size || '0.82') + 'rem * var(--font-size-multiplier))';
+        bannerEl.classList.remove('hidden');
+    } else {
+        bannerEl.classList.add('hidden');
+    }
 
     if (currentStores.length === 0) {
         listEl.innerHTML = '';

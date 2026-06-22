@@ -121,12 +121,25 @@ function renderDetail(store) {
         <div class="detail-section">
             <div class="detail-section-title">💬 用户评价（${(store.reviews || []).length}条）</div>
             ${reviewsHTML}
+            <!-- 新增评价表单 -->
+            <div class="review-form" style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-color);">
+                <div class="review-form-title" style="font-size:calc(0.85rem*var(--font-size-multiplier));font-weight:600;margin-bottom:10px;">✍️ 写评价</div>
+                <input type="text" id="review-nickname-${store.id}" class="form-input" placeholder="你的昵称" style="margin-bottom:8px;" maxlength="20" value="${escapeHTML(Storage.getNickname())}">
+                <div class="review-stars" id="review-stars-${store.id}" style="margin-bottom:8px;font-size:1.3rem;cursor:pointer;">
+                    <span data-star="1">☆</span><span data-star="2">☆</span><span data-star="3">☆</span><span data-star="4">☆</span><span data-star="5">☆</span>
+                </div>
+                <textarea id="review-text-${store.id}" class="form-input form-textarea" rows="2" placeholder="写下你的评价..." maxlength="500"></textarea>
+                <button class="form-submit-btn" onclick="submitReview('${store.id}')" style="margin-top:8px;padding:10px;font-size:calc(0.85rem*var(--font-size-multiplier));">提交评价</button>
+            </div>
         </div>
     `;
 
     if (store.photos && store.photos.length > 1) {
         initGallery(store.photos.length);
     }
+
+    // 初始化评价星星
+    setTimeout(function() { initReviewStars(store.id); }, 100);
 }
 
 function initGallery(count) {
@@ -325,6 +338,63 @@ function generateCategoryOptions(current) {
 function generateDistrictOptions(current) {
     const districts = ['金水区','二七区','中原区','管城回族区','惠济区','郑东新区','高新区','经开区','航空港区','上街区','其他'];
     return districts.map(d => `<option value="${d}" ${d === current ? 'selected' : ''}>${d}</option>`).join('');
+}
+
+/* --- 用户评价 --- */
+
+let pendingReviewRating = 5;
+
+function initReviewStars(storeId) {
+    const starsEl = document.getElementById('review-stars-' + storeId);
+    if (!starsEl) return;
+    pendingReviewRating = 5;
+
+    starsEl.querySelectorAll('span').forEach(span => {
+        span.addEventListener('click', function(e) {
+            e.stopPropagation();
+            pendingReviewRating = parseInt(this.dataset.star);
+            updateStarDisplay(starsEl, pendingReviewRating);
+        });
+    });
+    updateStarDisplay(starsEl, 5);
+}
+
+function updateStarDisplay(container, rating) {
+    container.querySelectorAll('span').forEach(s => {
+        s.textContent = parseInt(s.dataset.star) <= rating ? '⭐' : '☆';
+    });
+}
+
+function submitReview(storeId) {
+    const nickname = document.getElementById('review-nickname-' + storeId).value.trim() || '匿名吃货';
+    const text = document.getElementById('review-text-' + storeId).value.trim();
+    if (!text) { showToast('请输入评价内容'); return; }
+
+    // 保存昵称
+    Storage.setNickname(nickname);
+
+    const review = {
+        user: nickname,
+        avatar: '😊',
+        rating: pendingReviewRating,
+        comment: text,
+        date: new Date().toISOString().split('T')[0],
+    };
+
+    // 获取当前店铺数据
+    const ad = getAuthorData();
+    const store = findStoreById(storeId);
+    if (!store) return;
+
+    // 在作者数据中追加评价
+    const existing = ad.editedStores[storeId] || {};
+    const existingReviews = existing.reviews || store.reviews || [];
+    existing.reviews = [...existingReviews, review];
+    authorEditStore(storeId, existing);
+
+    refreshStores();
+    renderDetail(findStoreById(storeId));
+    showToast('✅ 评价已提交！');
 }
 
 /* --- 辅助 --- */

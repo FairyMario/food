@@ -1,6 +1,6 @@
 {
-  "name": "郑州美食地图",
-  "short_name": "郑州美食",
+  "name": "吃遍郑州",
+  "short_name": "吃遍郑州",
   "description": "发现郑州最地道的美食，胡辣汤、烩面、豫菜、小吃一网打尽",
   "start_url": "/",
   "display": "standalone",
