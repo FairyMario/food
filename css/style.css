@@ -1172,6 +1172,26 @@ body.dark .musttry-item {
     color: var(--text-muted);
 }
 
+.subitem-del-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subitem-del-btn:active {
+    background: #f8d7da;
+    color: #e74c3c;
+}
+
 /* ============================================
    关于页面
    ============================================ */

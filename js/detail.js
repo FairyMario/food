@@ -209,9 +209,37 @@ function openEditForm() {
     showSubPage(page);
 }
 
+// 编辑时暂存的分店和照片数据
+let _editBranches = [];
+let _editPhotos = [];
+
 function createEditStorePage(store) {
-    const isNew = !_baseStores.find(s => s.id === store.id) &&
-                  !getAuthorData().editedStores[store.id];
+    _editBranches = JSON.parse(JSON.stringify(store.branches || []));
+    _editPhotos = JSON.parse(JSON.stringify(store.photos || []));
+
+    var branchesHTML = _editBranches.map(function(b, i) {
+        return '<div class="edit-branch-item" style="background:var(--bg-tertiary);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<strong style="font-size:calc(0.85rem*var(--font-size-multiplier)))">分店' + (i+1) + '</strong>' +
+            (_editBranches.length > 1 ? '<button type="button" class="subitem-del-btn" onclick="removeEditBranch('+i+')">✕</button>' : '') +
+            '</div>' +
+            '<input class="form-input" placeholder="分店名称" value="' + escapeHTML(b.name || '') + '" data-branch="'+i+'" data-field="name" style="margin-bottom:6px;">' +
+            '<input class="form-input" placeholder="详细地址" value="' + escapeHTML(b.address || '') + '" data-branch="'+i+'" data-field="address" style="margin-bottom:6px;">' +
+            '<select class="form-input" data-branch="'+i+'" data-field="district" style="margin-bottom:6px;">' + generateDistrictOptions(b.district || '') + '</select>' +
+            '<div class="form-row">' +
+            '<input type="number" class="form-input" placeholder="纬度" step="0.0001" value="' + (b.lat || '') + '" data-branch="'+i+'" data-field="lat" style="flex:1;">' +
+            '<input type="number" class="form-input" placeholder="经度" step="0.0001" value="' + (b.lng || '') + '" data-branch="'+i+'" data-field="lng" style="flex:1;">' +
+            '</div>' +
+            '<input class="form-input" placeholder="营业时间 如：06:00-14:00" value="' + escapeHTML(b.openingHours || '') + '" data-branch="'+i+'" data-field="openingHours" style="margin-top:6px;">' +
+            '</div>';
+    }).join('');
+
+    var photosHTML = _editPhotos.map(function(p, i) {
+        return '<div style="position:relative;display:inline-block;margin:4px;">' +
+            '<img src="' + p + '" style="width:70px;height:70px;object-fit:cover;border-radius:6px;">' +
+            '<button type="button" onclick="removeEditPhoto('+i+')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:#e74c3c;color:#fff;font-size:0.7rem;cursor:pointer;line-height:20px;">✕</button>' +
+            '</div>';
+    }).join('');
 
     const page = document.createElement('div');
     page.className = 'detail-page sublist-page';
@@ -231,62 +259,29 @@ function createEditStorePage(store) {
                 </div>
                 <div class="form-group">
                     <label class="form-label">分类</label>
-                    <select name="category" class="form-input">
-                        ${generateCategoryOptions(store.category)}
-                    </select>
+                    <select name="category" class="form-input">${generateCategoryOptions(store.category)}</select>
                 </div>
+                <div class="form-group"><label class="form-label">标签（逗号分隔）</label><input type="text" name="tags" class="form-input" value="${escapeHTML((store.tags||[]).join('，'))}"></div>
+                <div class="form-group"><label class="form-label">推荐星级</label><input type="number" name="rating" class="form-input" min="1" max="5" value="${store.rating||4}"></div>
+                <div class="form-group"><label class="form-label">人均价格</label><input type="text" name="priceRange" class="form-input" value="${escapeHTML(store.priceRange||'')}" placeholder="如：20-40元"></div>
+                <div class="form-group"><label class="form-label">店铺介绍</label><textarea name="description" class="form-input form-textarea" rows="3">${escapeHTML(store.description||'')}</textarea></div>
+                <div class="form-group"><label class="form-label">必点推荐（逗号分隔）</label><input type="text" name="mustTry" class="form-input" value="${escapeHTML((store.mustTry||[]).join('，'))}"></div>
+                <div class="form-group"><label class="form-label">小贴士</label><input type="text" name="tips" class="form-input" value="${escapeHTML(store.tips||'')}"></div>
+
+                <!-- 分店 -->
                 <div class="form-group">
-                    <label class="form-label">标签（用逗号分隔）</label>
-                    <input type="text" name="tags" class="form-input" value="${escapeHTML((store.tags || []).join('，'))}">
+                    <label class="form-label">📍 分店地址</label>
+                    <div id="edit-branches-container">${branchesHTML}</div>
+                    <button type="button" class="form-submit-btn" onclick="addEditBranch()" style="background:var(--bg-tertiary);color:var(--text-primary);margin-top:0;">➕ 添加分店</button>
                 </div>
+
+                <!-- 照片 -->
                 <div class="form-group">
-                    <label class="form-label">推荐星级（1-5）</label>
-                    <input type="number" name="rating" class="form-input" min="1" max="5" value="${store.rating || 4}">
+                    <label class="form-label">🖼️ 店铺照片</label>
+                    <div id="edit-photos-container" style="min-height:30px;">${photosHTML || '<div style="color:var(--text-muted);font-size:calc(0.78rem*var(--font-size-multiplier)))">暂无照片</div>'}</div>
+                    <input type="file" id="edit-photos-input" class="form-input" accept="image/*" multiple onchange="handleEditPhotos(this.files)" style="margin-top:6px;">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">人均价格</label>
-                    <input type="text" name="priceRange" class="form-input" value="${escapeHTML(store.priceRange || '')}" placeholder="如：20-40元">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">店铺介绍</label>
-                    <textarea name="description" class="form-input form-textarea" rows="3">${escapeHTML(store.description || '')}</textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">必点推荐（用逗号分隔）</label>
-                    <input type="text" name="mustTry" class="form-input" value="${escapeHTML((store.mustTry || []).join('，'))}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">小贴士</label>
-                    <input type="text" name="tips" class="form-input" value="${escapeHTML(store.tips || '')}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">分店名称</label>
-                    <input type="text" name="branchName" class="form-input" value="${escapeHTML((store.branches || [])[0]?.name || store.name)}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">分店地址</label>
-                    <input type="text" name="branchAddress" class="form-input" value="${escapeHTML((store.branches || [])[0]?.address || '')}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">所在区域</label>
-                    <select name="branchDistrict" class="form-input">
-                        ${generateDistrictOptions((store.branches || [])[0]?.district || '')}
-                    </select>
-                </div>
-                <div class="form-row">
-                    <div class="form-group" style="flex:1;">
-                        <label class="form-label">纬度</label>
-                        <input type="number" name="branchLat" class="form-input" step="0.0001" value="${(store.branches || [])[0]?.lat || ''}">
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label class="form-label">经度</label>
-                        <input type="number" name="branchLng" class="form-input" step="0.0001" value="${(store.branches || [])[0]?.lng || ''}">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">营业时间</label>
-                    <input type="text" name="openingHours" class="form-input" value="${escapeHTML((store.branches || [])[0]?.openingHours || '')}">
-                </div>
+
                 <button type="submit" class="form-submit-btn">💾 保存修改</button>
                 <button type="button" class="form-revert-btn" onclick="authorRevertStore('${store.id}');closeSubPage();refreshStores();renderHome();showToast('已还原为原始数据')">↩️ 还原原始数据</button>
             </form>
@@ -296,30 +291,110 @@ function createEditStorePage(store) {
     return page.querySelector('.subpage-content');
 }
 
+function addEditBranch() {
+    _editBranches.push({ id: 'br_' + Date.now(), name: '', address: '', district: '', lat: '', lng: '', openingHours: '', phone: '' });
+    refreshEditBranchesUI();
+}
+
+function removeEditBranch(index) {
+    if (_editBranches.length <= 1) { showToast('至少保留一个分店'); return; }
+    _editBranches.splice(index, 1);
+    refreshEditBranchesUI();
+}
+
+function refreshEditBranchesUI() {
+    var container = document.getElementById('edit-branches-container');
+    if (!container) return;
+    container.innerHTML = _editBranches.map(function(b, i) {
+        return '<div class="edit-branch-item" style="background:var(--bg-tertiary);border-radius:8px;padding:12px;margin-bottom:10px;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+            '<strong>分店' + (i+1) + '</strong>' +
+            (_editBranches.length > 1 ? '<button type="button" class="subitem-del-btn" onclick="removeEditBranch('+i+')">✕</button>' : '') +
+            '</div>' +
+            '<input class="form-input" placeholder="分店名称" value="' + escapeHTML(b.name || '') + '" data-branch="'+i+'" data-field="name" style="margin-bottom:6px;">' +
+            '<input class="form-input" placeholder="详细地址" value="' + escapeHTML(b.address || '') + '" data-branch="'+i+'" data-field="address" style="margin-bottom:6px;">' +
+            '<select class="form-input" data-branch="'+i+'" data-field="district" style="margin-bottom:6px;">' + generateDistrictOptions(b.district || '') + '</select>' +
+            '<div class="form-row">' +
+            '<input type="number" class="form-input" placeholder="纬度" step="0.0001" value="' + (b.lat || '') + '" data-branch="'+i+'" data-field="lat" style="flex:1;">' +
+            '<input type="number" class="form-input" placeholder="经度" step="0.0001" value="' + (b.lng || '') + '" data-branch="'+i+'" data-field="lng" style="flex:1;">' +
+            '</div>' +
+            '<input class="form-input" placeholder="营业时间 如：06:00-14:00" value="' + escapeHTML(b.openingHours || '') + '" data-branch="'+i+'" data-field="openingHours" style="margin-top:6px;">' +
+            '</div>';
+    }).join('');
+}
+
+function removeEditPhoto(index) {
+    _editPhotos.splice(index, 1);
+    refreshEditPhotosUI();
+}
+
+function handleEditPhotos(files) {
+    Array.from(files).forEach(function(file, i) {
+        if (_editPhotos.length + i >= 9) return;
+        compressImage(file, 800, 800, 0.7).then(function(dataUrl) {
+            _editPhotos.push(dataUrl);
+            refreshEditPhotosUI();
+        });
+    });
+}
+
+function refreshEditPhotosUI() {
+    var container = document.getElementById('edit-photos-container');
+    if (!container) return;
+    if (_editPhotos.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted);font-size:0.78rem;">暂无照片</div>';
+        return;
+    }
+    container.innerHTML = _editPhotos.map(function(p, i) {
+        return '<div style="position:relative;display:inline-block;margin:4px;">' +
+            '<img src="' + p + '" style="width:70px;height:70px;object-fit:cover;border-radius:6px;">' +
+            '<button type="button" onclick="removeEditPhoto('+i+')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:#e74c3c;color:#fff;font-size:0.7rem;cursor:pointer;line-height:20px;">✕</button>' +
+            '</div>';
+    }).join('');
+}
+
+function collectEditBranches() {
+    var container = document.getElementById('edit-branches-container');
+    if (!container) return _editBranches;
+    var inputs = container.querySelectorAll('[data-branch]');
+    inputs.forEach(function(inp) {
+        var i = parseInt(inp.dataset.branch);
+        var field = inp.dataset.field;
+        if (_editBranches[i]) {
+            _editBranches[i][field] = (field === 'lat' || field === 'lng') ? parseFloat(inp.value) || '' : inp.value;
+        }
+    });
+    return _editBranches;
+}
+
 function submitEditStore(e, storeId) {
     e.preventDefault();
-    const form = e.target;
-    const fd = new FormData(form);
+    var form = e.target;
+    var fd = new FormData(form);
+    var branches = collectEditBranches();
 
-    const newData = {
+    var newData = {
         name: fd.get('name'),
         category: fd.get('category'),
-        tags: fd.get('tags') ? fd.get('tags').split(/[,，]/).map(t => t.trim()).filter(Boolean) : [],
+        tags: fd.get('tags') ? fd.get('tags').split(/[,，]/).map(function(t){return t.trim()}).filter(Boolean) : [],
         rating: parseInt(fd.get('rating')) || 4,
         priceRange: fd.get('priceRange'),
         description: fd.get('description'),
-        mustTry: fd.get('mustTry') ? fd.get('mustTry').split(/[,，]/).map(t => t.trim()).filter(Boolean) : [],
+        mustTry: fd.get('mustTry') ? fd.get('mustTry').split(/[,，]/).map(function(t){return t.trim()}).filter(Boolean) : [],
         tips: fd.get('tips'),
-        branches: [{
-            id: storeId + '_main',
-            name: fd.get('branchName') || fd.get('name'),
-            address: fd.get('branchAddress'),
-            district: fd.get('branchDistrict'),
-            lat: parseFloat(fd.get('branchLat')) || 34.7533,
-            lng: parseFloat(fd.get('branchLng')) || 113.6654,
-            openingHours: fd.get('openingHours'),
-            phone: '',
-        }],
+        photos: _editPhotos.slice(),
+        branches: branches.map(function(b, i) {
+            return {
+                id: b.id || storeId + '_br' + i,
+                name: b.name || fd.get('name'),
+                address: b.address || '',
+                district: b.district || '其他',
+                lat: parseFloat(b.lat) || 34.7533,
+                lng: parseFloat(b.lng) || 113.6654,
+                openingHours: b.openingHours || '',
+                phone: b.phone || '',
+            };
+        }),
     };
 
     authorEditStore(storeId, newData);
@@ -327,7 +402,7 @@ function submitEditStore(e, storeId) {
     refreshStores();
     renderHome();
     updateSettingsCounts();
-    showToast('✅ 修改已保存（导出数据后永久生效）');
+    showToast('✅ 修改已保存');
 }
 
 function generateCategoryOptions(current) {

@@ -195,11 +195,10 @@ const Storage = {
     },
 
     /**
-     * 清除所有缓存
+     * 清除所有缓存（保留收藏和昵称）
      */
     clearAll() {
-        localStorage.removeItem(STORAGE_KEYS.FAVORITES);
         localStorage.removeItem(STORAGE_KEYS.HISTORY);
-        // 保留深色模式、字体大小、昵称、横幅设置
+        // 保留：收藏、深色模式、字体大小、昵称、横幅设置
     }
 };

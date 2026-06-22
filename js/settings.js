@@ -549,19 +549,58 @@ function renderAuthorExportTab() {
         <div style="padding:0;">
             <div class="author-stats">
                 <div class="author-stat-item">📊 当前数据：${getMergedStores().length} 家店铺</div>
-                ${stats.hasChanges ? `<div class="author-stat-warn">⚠️ 待导出修改：${stats.added}新增 ${stats.edited}修改 ${stats.deleted}删除</div>` : '<div class="author-stat-ok">✅ 数据无修改</div>'}
+                ${stats.hasChanges ? `<div class="author-stat-warn">⚠️ 待发布修改：${stats.added}新增 ${stats.edited}修改 ${stats.deleted}删除</div>` : '<div class="author-stat-ok">✅ 数据无修改</div>'}
             </div>
 
-            <button class="form-submit-btn" onclick="downloadFoodsJSON()" style="margin-bottom:12px;">⬇️ 下载更新后的 foods.json</button>
+            <button class="form-submit-btn" onclick="oneClickPublish()" style="margin-bottom:8px;background:#27ae60;">🚀 一键发布到线上</button>
+            <div id="publish-status" style="margin-bottom:12px;font-size:calc(0.78rem*var(--font-size-multiplier));"></div>
+
+            <button class="form-submit-btn" onclick="downloadFoodsJSON()" style="margin-bottom:12px;background:var(--bg-tertiary);color:var(--text-primary);">⬇️ 下载 foods.json（备用）</button>
 
             <div class="form-group">
-                <label class="form-label">JSON 预览（复制后手动替换 data/foods.json）</label>
-                <textarea class="form-input form-textarea" rows="12" style="font-size:0.7rem;font-family:monospace;" readonly>${escapeHTML(jsonPreview)}</textarea>
+                <label class="form-label">JSON 预览</label>
+                <textarea class="form-input form-textarea" rows="10" style="font-size:0.65rem;font-family:monospace;" readonly>${escapeHTML(jsonPreview)}</textarea>
             </div>
 
-            <button class="form-revert-btn" onclick="clearAllChanges()">⚠️ 清除所有未导出的修改</button>
+            <button class="form-revert-btn" onclick="clearAllChanges()">⚠️ 清除所有未发布的修改</button>
         </div>
     `;
+}
+
+async function oneClickPublish() {
+    const stats = getAuthorStats();
+    if (!stats.hasChanges) { showToast('没有需要发布的修改'); return; }
+
+    const statusEl = document.getElementById('publish-status');
+    statusEl.textContent = '🔄 正在发布...';
+    statusEl.style.color = 'var(--text-muted)';
+
+    const stores = getMergedStores();
+    const message = '📝 作者一键发布（' + stats.added + '新增 ' + stats.edited + '修改 ' + stats.deleted + '删除）';
+
+    try {
+        const resp = await fetch('/.netlify/functions/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stores: stores, message: message }),
+        });
+        const data = await resp.json();
+        if (data.success) {
+            statusEl.innerHTML = '✅ 发布成功！1分钟后全网更新<br><small style="color:var(--text-muted)">刷新页面即可看到最新版本</small>';
+            statusEl.style.color = '#27ae60';
+            // 清除 localStorage 修改（已固化到线上）
+            clearAllAuthorChanges();
+            refreshStores();
+            renderHome();
+            setTimeout(() => renderAuthorTab('export'), 1500);
+        } else {
+            statusEl.textContent = '❌ 发布失败：' + (data.error || '未知错误');
+            statusEl.style.color = '#e74c3c';
+        }
+    } catch (e) {
+        statusEl.textContent = '❌ 网络错误，请稍后重试';
+        statusEl.style.color = '#e74c3c';
+    }
 }
 
 function clearAllChanges() {
@@ -640,7 +679,7 @@ function setFontSize(size) {
 }
 
 function confirmClearCache() {
-    showConfirm('确定要清除缓存数据吗？这将删除所有收藏和浏览历史。（深色模式和字体设置不受影响）', () => {
+    showConfirm('确定要清除缓存数据吗？这将删除浏览历史。（收藏、深色模式和字体设置不受影响）', () => {
         Storage.clearAll();
         updateSettingsCounts();
         showToast('缓存已清除 ✅');
@@ -706,12 +745,15 @@ function openSublistPage(type) {
                     : `<div class="subitem-img" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🍜</div>`;
                 const distStr = getNearestDistanceStr(store, userLocation?.lat, userLocation?.lng);
                 html += `
-                    <div class="subitem-card" onclick="closeSubPage();openDetail('${escapeHTML(store.id)}')">
-                        ${imageHTML}
-                        <div class="subitem-info">
-                            <div class="subitem-name">${escapeHTML(store.name)}</div>
-                            <div class="subitem-meta">${renderStars(store.rating)} · 📍 ${distStr}</div>
+                    <div class="subitem-card">
+                        <div onclick="closeSubPage();openDetail('${escapeHTML(store.id)}')" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                            ${imageHTML}
+                            <div class="subitem-info">
+                                <div class="subitem-name">${escapeHTML(store.name)}</div>
+                                <div class="subitem-meta">${renderStars(store.rating)} · 📍 ${distStr}</div>
+                            </div>
                         </div>
+                        <button class="subitem-del-btn" onclick="event.stopPropagation();removeFavoriteItem('${escapeHTML(id)}','${type}')" title="取消收藏">✕</button>
                     </div>
                 `;
             }
@@ -720,6 +762,14 @@ function openSublistPage(type) {
         page.innerHTML = html;
     }
     showSubPage(page);
+}
+
+function removeFavoriteItem(storeId, type) {
+    Storage.removeFavorite(storeId);
+    updateSettingsCounts();
+    // 刷新当前列表
+    openSublistPage(type);
+    showToast('已取消收藏');
 }
 
 function createSubPage(title) {

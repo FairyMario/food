@@ -36,10 +36,13 @@ async function initSearch() {
                 openDetail(store.id);
             }
         });
-        mapFitAll();
 
+        // 优先定位到用户位置
         if (searchUserLocation) {
             addUserMarker(searchUserLocation.lat, searchUserLocation.lng);
+            mapSetCenter(searchUserLocation.lat, searchUserLocation.lng, 14);
+        } else {
+            mapFitAll();
         }
     }
 }
