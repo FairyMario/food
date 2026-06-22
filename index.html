@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#e74c3c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="郑州美食地图">
+    <meta name="description" content="发现郑州最地道的美食，胡辣汤、烩面、豫菜、小吃一网打尽">
+    <title>郑州美食地图</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="images/icon.svg">
+    <link rel="apple-touch-icon" href="images/icon.svg">
+</head>
+<body>
+    <!-- ========== 主容器 ========== -->
+    <div id="app">
+        <!-- ========== Tab 1: 首页 ========== -->
+        <div id="tab-home" class="tab-content active">
+            <!-- 顶栏 -->
+            <div class="top-bar">
+                <h1 class="top-title">郑州美食地图</h1>
+                <button id="view-switch-btn" class="view-switch-btn" aria-label="切换分类视图">
+                    <span id="view-switch-text">总览</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+            </div>
+
+            <!-- 视图切换下拉菜单 -->
+            <div id="view-menu" class="view-menu hidden">
+                <div class="view-menu-item active" data-view="all">📋 总览</div>
+                <div class="view-menu-item" data-view="district">📍 按区域划分</div>
+                <div class="view-menu-item" data-view="rating">⭐ 按推荐星级</div>
+            </div>
+
+            <!-- 卡片列表容器 -->
+            <div id="home-list" class="home-list"></div>
+
+            <!-- 空状态 -->
+            <div id="home-empty" class="empty-state hidden">
+                <div class="empty-icon">🍽️</div>
+                <p>暂无美食数据</p>
+            </div>
+        </div>
+
+        <!-- ========== Tab 2: 搜索 ========== -->
+        <div id="tab-search" class="tab-content">
+            <!-- 搜索栏 -->
+            <div class="search-bar">
+                <div class="search-input-wrap">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-input" class="search-input" placeholder="搜索店铺名称..." autocomplete="off">
+                    <button id="search-clear" class="search-clear hidden" aria-label="清除搜索">✕</button>
+                </div>
+            </div>
+
+            <!-- 地图容器 -->
+            <div id="map-container" class="map-container"></div>
+
+            <!-- 搜索结果分店弹窗 -->
+            <div id="branch-popup" class="branch-popup hidden">
+                <div class="branch-popup-overlay"></div>
+                <div class="branch-popup-content">
+                    <div class="branch-popup-handle"></div>
+                    <div class="branch-popup-header">
+                        <h3 id="branch-popup-title">分店列表</h3>
+                        <button id="branch-popup-close" class="branch-popup-close">✕</button>
+                    </div>
+                    <div id="branch-popup-list" class="branch-popup-list"></div>
+                </div>
+            </div>
+
+            <!-- 搜索结果为空 -->
+            <div id="search-empty" class="search-empty hidden">
+                <div class="empty-icon">🔍</div>
+                <p>未找到相关店铺</p>
+            </div>
+        </div>
+
+        <!-- ========== Tab 3: 个人设置 ========== -->
+        <div id="tab-settings" class="tab-content">
+            <div class="top-bar">
+                <h1 class="top-title">个人设置</h1>
+            </div>
+            <div class="settings-list">
+                <!-- 作者模式 -->
+                <div class="settings-item" data-action="author" id="author-entry">
+                    <span class="settings-icon">🔐</span>
+                    <span class="settings-label">作者模式</span>
+                    <span class="settings-desc">输入密码进入管理</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 用户推荐 -->
+                <div class="settings-item" data-action="recommend">
+                    <span class="settings-icon">🌟</span>
+                    <span class="settings-label">用户推荐</span>
+                    <span class="settings-desc">推荐你发现的美食</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 我的收藏 -->
+                <div class="settings-item" data-action="favorites">
+                    <span class="settings-icon">❤️</span>
+                    <span class="settings-label">我的收藏</span>
+                    <span class="settings-desc" id="favorites-count">0 家店铺</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 浏览历史 -->
+                <div class="settings-item" data-action="history">
+                    <span class="settings-icon">🕐</span>
+                    <span class="settings-label">浏览历史</span>
+                    <span class="settings-desc" id="history-count">0 条记录</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 深色模式 -->
+                <div class="settings-item" data-action="darkmode">
+                    <span class="settings-icon">🌙</span>
+                    <span class="settings-label">深色模式</span>
+                    <span class="settings-desc" id="darkmode-status">已关闭</span>
+                    <div class="settings-toggle">
+                        <input type="checkbox" id="darkmode-toggle" class="toggle-input">
+                        <label for="darkmode-toggle" class="toggle-label"></label>
+                    </div>
+                </div>
+                <!-- 字体大小 -->
+                <div class="settings-item" data-action="fontsize">
+                    <span class="settings-icon">🔤</span>
+                    <span class="settings-label">字体大小</span>
+                    <span class="settings-desc" id="fontsize-status">标准</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 清除缓存 -->
+                <div class="settings-item" data-action="clearcache">
+                    <span class="settings-icon">🗑️</span>
+                    <span class="settings-label">清除缓存</span>
+                    <span class="settings-desc">释放手机存储空间</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 意见反馈 -->
+                <div class="settings-item" data-action="feedback">
+                    <span class="settings-icon">📧</span>
+                    <span class="settings-label">意见反馈</span>
+                    <span class="settings-desc">告诉我们你的想法</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+                <!-- 关于本站 -->
+                <div class="settings-item" data-action="about">
+                    <span class="settings-icon">ℹ️</span>
+                    <span class="settings-label">关于本站</span>
+                    <span class="settings-desc">版本 1.0.0</span>
+                    <svg class="settings-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 详情页（覆盖层） ========== -->
+        <div id="detail-page" class="detail-page hidden">
+            <div class="detail-header">
+                <button id="detail-back" class="detail-back" aria-label="返回">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <h2 class="detail-title">店铺详情</h2>
+                <div class="detail-header-actions">
+                    <button id="detail-edit-btn" class="detail-back hidden" aria-label="编辑" onclick="openEditForm()" style="margin-right:6px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    </button>
+                    <button id="detail-delete-btn" class="detail-back hidden" aria-label="删除" onclick="authorDeleteCurrentStore()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                    <button id="detail-favorite" class="detail-favorite" aria-label="收藏">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="detail-content" class="detail-content"></div>
+        </div>
+
+        <!-- ========== 推荐表单（覆盖层） ========== -->
+        <div id="recommend-page" class="detail-page hidden">
+            <div class="detail-header">
+                <button id="recommend-back" class="detail-back" aria-label="返回">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <h2 class="detail-title">推荐美食</h2>
+                <div></div>
+            </div>
+            <div class="recommend-content">
+                <form id="recommend-form" class="recommend-form">
+                    <div class="form-group">
+                        <label class="form-label">店铺名称 <span class="required">*</span></label>
+                        <input type="text" name="name" class="form-input" placeholder="请输入店铺名称" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">所在区域 <span class="required">*</span></label>
+                        <select name="district" class="form-input" required>
+                            <option value="">请选择区域</option>
+                            <option value="金水区">金水区</option>
+                            <option value="二七区">二七区</option>
+                            <option value="中原区">中原区</option>
+                            <option value="管城回族区">管城回族区</option>
+                            <option value="惠济区">惠济区</option>
+                            <option value="郑东新区">郑东新区</option>
+                            <option value="高新区">高新区</option>
+                            <option value="经开区">经开区</option>
+                            <option value="航空港区">航空港区</option>
+                            <option value="上街区">上街区</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">详细地址 <span class="required">*</span></label>
+                        <input type="text" name="address" class="form-input" placeholder="请输入详细地址" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">美食分类</label>
+                        <select name="category" class="form-input">
+                            <option value="">请选择分类</option>
+                            <option value="胡辣汤">胡辣汤</option>
+                            <option value="烩面">烩面</option>
+                            <option value="豫菜">豫菜</option>
+                            <option value="小吃">小吃</option>
+                            <option value="早餐">早餐</option>
+                            <option value="夜宵">夜宵</option>
+                            <option value="烧烤">烧烤</option>
+                            <option value="火锅">火锅</option>
+                            <option value="面食">面食</option>
+                            <option value="甜点饮品">甜点饮品</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">推荐理由 <span class="required">*</span></label>
+                        <textarea name="reason" class="form-input form-textarea" rows="4" placeholder="说说你为什么推荐这家店..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">上传照片（最多9张）</label>
+                        <input type="file" name="photos" class="form-input" accept="image/*" multiple onchange="handlePhotoUpload(this.files)">
+                        <div id="photo-preview" class="photo-preview"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">你的昵称</label>
+                        <input type="text" name="nickname" class="form-input" placeholder="让大家知道是谁推荐的">
+                    </div>
+                    <button type="submit" class="form-submit-btn">提交推荐</button>
+                </form>
+                <div id="recommend-success" class="recommend-success hidden">
+                    <div class="success-icon">✅</div>
+                    <h3>推荐成功！</h3>
+                    <p>感谢你的推荐，作者审核通过后将会上线展示。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 底部导航 ========== -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">首页</span>
+            </button>
+            <button class="nav-item" data-tab="search">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">搜索</span>
+            </button>
+            <button class="nav-item" data-tab="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">设置</span>
+            </button>
+        </nav>
+
+        <!-- ========== Toast 提示 ========== -->
+        <div id="toast" class="toast hidden"></div>
+
+        <!-- ========== 确认对话框 ========== -->
+        <div id="confirm-dialog" class="confirm-dialog hidden">
+            <div class="confirm-overlay"></div>
+            <div class="confirm-content">
+                <p id="confirm-message"></p>
+                <div class="confirm-buttons">
+                    <button id="confirm-cancel" class="confirm-btn cancel">取消</button>
+                    <button id="confirm-ok" class="confirm-btn ok">确定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 字体大小弹窗 ========== -->
+        <div id="fontsize-dialog" class="confirm-dialog hidden">
+            <div class="confirm-overlay"></div>
+            <div class="confirm-content">
+                <h3>选择字体大小</h3>
+                <div class="fontsize-options">
+                    <button class="fontsize-option" data-size="small">小</button>
+                    <button class="fontsize-option active" data-size="medium">中</button>
+                    <button class="fontsize-option" data-size="large">大</button>
+                </div>
+                <div class="confirm-buttons">
+                    <button id="fontsize-close" class="confirm-btn cancel">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 高德地图 JS API -->
+    <script src="https://webapi.amap.com/maps?v=2.0&key=2d9d689ea5452c206c7423cf00ffe24f&callback=onAMapLoaded" defer></script>
+    <script>
+        // 高德地图加载完成的回调
+        window.onAMapLoaded = function() {
+            window._amapReady = true;
+            document.dispatchEvent(new Event('amap-ready'));
+        };
+    </script>
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/author.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/home.js"></script>
+    <script src="js/detail.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
